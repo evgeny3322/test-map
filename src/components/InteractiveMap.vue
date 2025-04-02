@@ -27,14 +27,16 @@ export default {
     const markers = ref([]);
     const highlightedStandId = ref(null);
 
+    // Инициализация карты при монтировании компонента
     onMounted(() => {
+      // Необходимо заменить на свой access token от Mapbox
       mapboxgl.accessToken = 'pk.eyJ1IjoiY3VybXVkZ2VvbnBoZCIsImEiOiJjbHAxZXU2dmwwajV6MmxwZzRpdXhobjB2In0.uIuuAtk1EtV7HSbjpUfeOw';
 
       map.value = new mapboxgl.Map({
         container: mapContainer.value,
         style: 'mapbox://styles/mapbox/light-v10',
-        center: [37.618423, 55.751244],
-        zoom: 13
+        center: [37.622504, 55.753215], // Центр Москвы (Красная площадь)
+        zoom: 10
       });
 
       // Добавление элементов управления к карте
@@ -162,8 +164,8 @@ export default {
 
       // Отдаляем карту для обзора всех стендов
       map.value.flyTo({
-        center: [37.618423, 55.751244], // Центр карты
-        zoom: 13,
+        center: [37.622504, 55.753215], // Центр карты (Красная площадь)
+        zoom: 10,
         duration: 1000
       });
     };

@@ -9,13 +9,17 @@
       <div class="modal-body">
         <div class="stand-info">
           <div class="stand-logo">
-            <img :src="stand.logo" :alt="stand.name" @error="handleImageError" class="stand-logo-img" />
+            <div v-if="stand.logoSvg" v-html="stand.logoSvg" class="stand-logo-svg"></div>
+            <img v-else :src="stand.logo" :alt="stand.name" @error="handleImageError" class="stand-logo-img" />
           </div>
           <div class="stand-description">
             <p>{{ stand.description }}</p>
             <div class="stand-location">
               <strong>Координаты:</strong>
               {{ stand.location.lat.toFixed(6) }}, {{ stand.location.lng.toFixed(6) }}
+              <div v-if="getLocationName(stand)" class="location-name">
+                <strong>Место:</strong> {{ getLocationName(stand) }}
+              </div>
             </div>
           </div>
         </div>
@@ -70,11 +74,44 @@ export default {
       closeModal();
     };
 
+    // Получение названия локации по координатам
+    const getLocationName = (stand) => {
+      const { lng, lat } = stand.location;
+
+      // Крокус Экспо
+      if (Math.abs(lng - 37.556441) < 0.001 && Math.abs(lat - 55.825983) < 0.001) {
+        return 'Крокус Экспо';
+      }
+
+      // Москва-Сити, Башня "Федерация"
+      if (Math.abs(lng - 37.537021) < 0.001 && Math.abs(lat - 55.749451) < 0.001) {
+        return 'Москва-Сити, Башня "Федерация"';
+      }
+
+      // Технополис "Москва"
+      if (Math.abs(lng - 37.632595) < 0.001 && Math.abs(lat - 55.731772) < 0.001) {
+        return 'Технополис "Москва"';
+      }
+
+      // Инновационный центр "Сколково"
+      if (Math.abs(lng - 37.403630) < 0.001 && Math.abs(lat - 55.751244) < 0.001) {
+        return 'Инновационный центр "Сколково"';
+      }
+
+      // Экспоцентр на Красной Пресне
+      if (Math.abs(lng - 37.587093) < 0.001 && Math.abs(lat - 55.750251) < 0.001) {
+        return 'Экспоцентр на Красной Пресне';
+      }
+
+      return '';
+    };
+
     return {
       imageError,
       handleImageError,
       closeModal,
-      goToCatalog
+      goToCatalog,
+      getLocationName
     };
   }
 };
@@ -156,6 +193,24 @@ export default {
   transform: scale(1.05);
 }
 
+.stand-logo-svg {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.stand-logo-svg:hover {
+  transform: scale(1.05);
+}
+
+.stand-logo-svg svg {
+  width: 100%;
+  height: 100%;
+}
+
 .stand-description {
   flex: 1;
 }
@@ -164,6 +219,12 @@ export default {
   margin-top: 10px;
   font-size: 0.9rem;
   color: #666;
+}
+
+.location-name {
+  margin-top: 5px;
+  color: #333;
+  font-weight: 500;
 }
 
 .discount-section {
