@@ -1,6 +1,7 @@
+<!-- components/StandModal.vue -->
 <template>
   <div class="modal-overlay" @click.self="closeModal">
-    <div class="modal-content" :style="{ borderTop: `5px solid ${stand.highlightColor || '#FF0000'}` }">
+    <div class="modal-content" :style="{ borderTop: `5px solid ${stand.highlightColor || getStandColor()}` }">
       <div class="modal-header">
         <h2>{{ stand.name }}</h2>
         <button class="close-button" @click="closeModal">×</button>
@@ -14,12 +15,18 @@
           </div>
           <div class="stand-description">
             <p>{{ stand.description }}</p>
-            <div class="stand-location">
-              <strong>Координаты:</strong>
-              {{ stand.location.lat.toFixed(6) }}, {{ stand.location.lng.toFixed(6) }}
-              <div v-if="getLocationName(stand)" class="location-name">
-                <strong>Место:</strong> {{ getLocationName(stand) }}
-              </div>
+            <div v-if="getLocationInfo()" class="location-info">
+              <strong>Местоположение:</strong> {{ getLocationInfo() }}
+            </div>
+          </div>
+        </div>
+
+        <div class="area-info" v-if="stand.shape">
+          <h3>Информация о павильоне</h3>
+          <div class="area-shape-info">
+            <div><strong>Тип:</strong> {{ getShapeType() }}</div>
+            <div class="area-size" v-if="getAreaSize()">
+              <strong>Площадь:</strong> {{ getAreaSize() }} м²
             </div>
           </div>
         </div>
@@ -32,7 +39,7 @@
             <button
                 class="catalog-button"
                 @click="goToCatalog(stand.discountCatalogUrl)"
-                :style="{ backgroundColor: stand.highlightColor || '#FF0000' }"
+                :style="{ backgroundColor: stand.highlightColor || getStandColor() }"
             >
               Перейти в каталог скидок
             </button>
@@ -74,36 +81,128 @@ export default {
       closeModal();
     };
 
-    // Получение названия локации по координатам
-    const getLocationName = (stand) => {
-      const { lng, lat } = stand.location;
+    // Получение типа фигуры на понятном языке
+    const getShapeType = () => {
+      if (!props.stand.shape) return '';
 
-      // Крокус Экспо
-      if (Math.abs(lng - 37.556441) < 0.001 && Math.abs(lat - 55.825983) < 0.001) {
-        return 'Крокус Экспо';
+      const shapeTypeMap = {
+        'rectangle': 'Прямоугольник',
+        'polygon': 'Многоугольник',
+        'circle': 'Круг',
+        'semicircle': 'Полукруг'
+      };
+
+      return shapeTypeMap[props.stand.shape.type] || props.stand.shape.type;
+    };
+
+    // Получение цвета стенда из формы, если не указан highlightColor
+    const getStandColor = () => {
+      if (props.stand.highlightColor) return props.stand.highlightColor;
+      if (props.stand.shape && props.stand.shape.style && props.stand.shape.style.fillColor) {
+        return props.stand.shape.style.fillColor;
+      }
+      return '#333333';
+    };
+
+    // Получение информации о местоположении
+    const getLocationInfo = () => {
+      // Координаты ВДНХ
+      if (props.stand.shape) {
+        // Для павильонов ВДНХ просто возвращаем название
+        return 'ВДНХ, Москва';
       }
 
-      // Москва-Сити, Башня "Федерация"
-      if (Math.abs(lng - 37.537021) < 0.001 && Math.abs(lat - 55.749451) < 0.001) {
-        return 'Москва-Сити, Башня "Федерация"';
+      // Для точек с координатами
+      if (props.stand.location) {
+        return `${props.stand.location.lat.toFixed(6)}, ${props.stand.location.lng.toFixed(6)}`;
       }
 
-      // Технополис "Москва"
-      if (Math.abs(lng - 37.632595) < 0.001 && Math.abs(lat - 55.731772) < 0.001) {
-        return 'Технополис "Москва"';
+      return null;
+    };
+
+    // Расчет примерной площади фигуры
+    const getAreaSize = () => {
+      if (!props.stand.shape) return null;
+
+      switch (props.stand.shape.type) {
+        case 'rectangle':
+          // Для прямоугольника вычисляем площадь
+          const [sw, ne] = props.stand.shape.coordinates;
+          // Вычисляем расстояние в метрах
+          const width = calculateDistance(
+              [sw[0], sw[1]],
+              [ne[0], sw[1]]
+          );
+          const height = calculateDistance(
+              [sw[0], sw[1]],
+              [sw[0], ne[1]]
+          );
+          return Math.round(width * height);
+
+        case 'circle':
+          // Для круга вычисляем площадь πr²
+          return Math.round(Math.PI * Math.pow(props.stand.shape.radius, 2));
+
+        case 'semicircle':
+          // Для полукруга вычисляем площадь πr²/2
+          return Math.round(Math.PI * Math.pow(props.stand.shape.radius, 2) / 2);
+
+        case 'polygon':
+          // Для полигона примерная площадь
+          // Это упрощенный расчет для нашего случая
+          return Math.round(calculatePolygonArea(props.stand.shape.coordinates));
+
+        default:
+          return null;
+      }
+    };
+
+    // Вычисление расстояния между двумя точками в метрах
+    const calculateDistance = (point1, point2) => {
+      const [lng1, lat1] = point1;
+      const [lng2, lat2] = point2;
+
+      // Радиус Земли в метрах
+      const R = 6371000;
+
+      // Перевод в радианы
+      const lat1Rad = lat1 * Math.PI / 180;
+      const lat2Rad = lat2 * Math.PI / 180;
+      const deltaLat = (lat2 - lat1) * Math.PI / 180;
+      const deltaLng = (lng2 - lng1) * Math.PI / 180;
+
+      // Формула гаверсинуса
+      const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+          Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+          Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+      // Расстояние в метрах
+      return R * c;
+    };
+
+    // Приблизительный расчет площади многоугольника
+    const calculatePolygonArea = (coordinates) => {
+      // Используем формулу Гаусса для расчета площади многоугольника
+      let area = 0;
+
+      for (let i = 0; i < coordinates.length; i++) {
+        const j = (i + 1) % coordinates.length;
+        const [lng1, lat1] = coordinates[i];
+        const [lng2, lat2] = coordinates[j];
+
+        // Переводим координаты в метры относительно экватора и нулевого меридиана
+        // Это упрощенная версия, для точности нужно учитывать кривизну Земли
+        const x1 = lng1 * 111320 * Math.cos(lat1 * Math.PI / 180);
+        const y1 = lat1 * 111320;
+        const x2 = lng2 * 111320 * Math.cos(lat2 * Math.PI / 180);
+        const y2 = lat2 * 111320;
+
+        area += (x1 * y2 - x2 * y1);
       }
 
-      // Инновационный центр "Сколково"
-      if (Math.abs(lng - 37.403630) < 0.001 && Math.abs(lat - 55.751244) < 0.001) {
-        return 'Инновационный центр "Сколково"';
-      }
-
-      // Экспоцентр на Красной Пресне
-      if (Math.abs(lng - 37.587093) < 0.001 && Math.abs(lat - 55.750251) < 0.001) {
-        return 'Экспоцентр на Красной Пресне';
-      }
-
-      return '';
+      // Берем абсолютное значение и делим на 2
+      return Math.abs(area) / 2;
     };
 
     return {
@@ -111,7 +210,10 @@ export default {
       handleImageError,
       closeModal,
       goToCatalog,
-      getLocationName
+      getShapeType,
+      getStandColor,
+      getLocationInfo,
+      getAreaSize
     };
   }
 };
@@ -215,16 +317,30 @@ export default {
   flex: 1;
 }
 
-.stand-location {
+.location-info {
   margin-top: 10px;
   font-size: 0.9rem;
   color: #666;
 }
 
-.location-name {
-  margin-top: 5px;
+.area-info {
+  background-color: #f7f7f7;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.area-info h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
   color: #333;
-  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.area-shape-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .discount-section {
