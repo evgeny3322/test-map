@@ -22,6 +22,20 @@
             <!-- Добавлены сведения о родительской зоне -->
             <div v-if="parentArea" class="parent-area-info">
               <strong>Расположен в зоне:</strong> {{ parentArea.name }}
+              <div v-if="grandParentArea" class="grand-parent-area-info">
+                <strong>Территория:</strong> {{ grandParentArea.name }}
+              </div>
+            </div>
+            
+            <!-- Полная иерархия родительских зон -->
+            <div v-if="parentHierarchy && parentHierarchy.length > 0" class="parent-hierarchy">
+              <strong>Иерархия зон:</strong>
+              <ul class="hierarchy-list">
+                <li v-for="(zone, index) in parentHierarchy" :key="zone.id">
+                  {{ zone.name }}
+                  <span v-if="index < parentHierarchy.length - 1" class="hierarchy-separator">→</span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
@@ -56,7 +70,7 @@
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 export default {
   name: 'StandModal',
@@ -68,11 +82,34 @@ export default {
     parentArea: {
       type: Object,
       default: null
+    },
+    parentHierarchy: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['close', 'goToCatalog'],
   setup(props, { emit }) {
     const imageError = ref(false);
+
+    // Получение родительской зоны для промежуточной зоны (бабушка для стенда)
+    const grandParentArea = computed(() => {
+      if (!props.parentArea || !props.parentArea.parentAreaId) return null;
+      
+      // Если передана иерархия, используем ее
+      if (props.parentHierarchy && props.parentHierarchy.length > 1) {
+        return props.parentHierarchy[1]; // Второй элемент - бабушка
+      }
+      
+      // Резервный вариант - проверка известных ID
+      if (props.parentArea.parentAreaId === 'exhibition-complex') {
+        return {
+          id: 'exhibition-complex',
+          name: 'Выставочный комплекс ВДНХ'
+        };
+      }
+      return null;
+    });
 
     // Обработка ошибки загрузки изображения
     const handleImageError = () => {
@@ -216,6 +253,7 @@ export default {
 
     return {
       imageError,
+      grandParentArea,
       handleImageError,
       closeModal,
       goToCatalog,
@@ -382,5 +420,43 @@ export default {
 .catalog-button:hover {
   opacity: 0.9;
   transform: translateY(-2px);
+}
+
+.parent-area-info {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.grand-parent-area-info {
+  margin-top: 5px;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.parent-hierarchy {
+  margin-top: 10px;
+  padding: 5px 10px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.hierarchy-list {
+  margin: 5px 0 0;
+  padding-left: 20px;
+  list-style-type: none;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.hierarchy-list li {
+  margin-right: 5px;
+  color: #666;
+}
+
+.hierarchy-separator {
+  margin: 0 5px;
+  color: #999;
 }
 </style>

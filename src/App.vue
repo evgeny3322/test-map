@@ -12,6 +12,7 @@
         v-if="selectedStand"
         :stand="selectedStand"
         :parentArea="getParentArea(selectedStand)"
+        :parentHierarchy="getParentHierarchy(selectedStand)"
         @close="closeStandDetails"
         @goToCatalog="goToCatalog"
     />
@@ -101,19 +102,49 @@ export default {
       highlightColor: '#8BC34A'
     };
 
-    // Стенды, расположенные внутри выставочного комплекса
+    // Промежуточная зона "Инновационная зона" внутри выставочного комплекса
+    const innovationZone = {
+      id: 'innovation-zone',
+      name: 'Инновационная зона',
+      logoSvg: logosSvg.museum,
+      parentAreaId: 'exhibition-complex', // Ссылка на родительскую зону
+      description: 'Специализированная зона внутри выставочного комплекса, где представлены новейшие технологические разработки и инновационные проекты.',
+      shape: {
+        type: 'polygon',
+        coordinates: [
+          [37.6245, 55.8285],
+          [37.6265, 55.8300],
+          [37.6285, 55.8295],
+          [37.6290, 55.8280],
+          [37.6270, 55.8270],
+          [37.6250, 55.8275]
+        ],
+        style: {
+          fillColor: '#673AB7',
+          strokeColor: '#673AB7',
+          fillOpacity: 0.4,
+          strokeWidth: 2
+        }
+      },
+      zIndex: 2, // Средний слой между родительской зоной и стендами
+      isClickable: true, // Кликабельный для получения общей информации о зоне
+      discountCatalogUrl: '/catalog/innovation',
+      highlightColor: '#673AB7'
+    };
+
+    // Стенды, расположенные внутри инновационной зоны
     const exhibitionStands = [
       {
         id: 'tech-stand-1',
         name: 'Павильон технологий',
         logoSvg: logosSvg.museum,
-        parentAreaId: 'exhibition-complex', // Ссылка на родительскую зону
+        parentAreaId: 'innovation-zone', // Теперь ссылка на промежуточную зону
         description: 'Современный павильон, демонстрирующий последние достижения в области технологий и инноваций.',
         shape: {
           type: 'rectangle',
           coordinates: [
-            [37.6240, 55.8290],
-            [37.6260, 55.8310]
+            [37.6250, 55.8280],
+            [37.6260, 55.8290]
           ],
           style: {
             fillColor: '#3F51B5',
@@ -122,7 +153,7 @@ export default {
             strokeWidth: 2
           }
         },
-        zIndex: 2, // Слой выше родительской зоны
+        zIndex: 3, // Верхний слой, выше родительской и промежуточной зоны
         isClickable: true,
         discountCatalogUrl: '/catalog/tech-stand',
         highlightColor: '#3F51B5'
@@ -131,12 +162,12 @@ export default {
         id: 'food-stand-1',
         name: 'Гастрономический павильон',
         logoSvg: logosSvg.food,
-        parentAreaId: 'exhibition-complex',
+        parentAreaId: 'innovation-zone', // Теперь ссылка на промежуточную зону
         description: 'Павильон с кулинарными мастер-классами и дегустацией блюд национальной кухни.',
         shape: {
           type: 'circle',
-          coordinates: [37.6280, 55.8300],
-          radius: 30, // метры
+          coordinates: [37.6270, 55.8285],
+          radius: 15, // метры, уменьшаем для размещения внутри новой зоны
           style: {
             fillColor: '#E91E63',
             strokeColor: '#E91E63',
@@ -144,7 +175,7 @@ export default {
             strokeWidth: 2
           }
         },
-        zIndex: 2,
+        zIndex: 3, // Верхний слой
         isClickable: true,
         discountCatalogUrl: '/catalog/food-stand',
         highlightColor: '#E91E63'
@@ -153,16 +184,15 @@ export default {
         id: 'entertainment-stand-1',
         name: 'Развлекательная зона',
         logoSvg: logosSvg.entertainment,
-        parentAreaId: 'exhibition-complex',
+        parentAreaId: 'innovation-zone', // Теперь ссылка на промежуточную зону
         description: 'Зона развлечений с интерактивными аттракционами и играми для всей семьи.',
         shape: {
           type: 'polygon',
           coordinates: [
-            [37.6270, 55.8275],
-            [37.6290, 55.8280],
-            [37.6295, 55.8290],
-            [37.6280, 55.8295],
-            [37.6265, 55.8285]
+            [37.6275, 55.8275],
+            [37.6285, 55.8280],
+            [37.6280, 55.8285],
+            [37.6270, 55.8280]
           ],
           style: {
             fillColor: '#FF9800',
@@ -171,7 +201,7 @@ export default {
             strokeWidth: 2
           }
         },
-        zIndex: 2,
+        zIndex: 3, // Верхний слой
         isClickable: true,
         discountCatalogUrl: '/catalog/entertainment-stand',
         highlightColor: '#FF9800'
@@ -182,6 +212,8 @@ export default {
     const vdnhAreas = [
       // Добавляем главную зону выставочного комплекса
       exhibitionArea,
+      // Добавляем промежуточную зону
+      innovationZone,
       // Добавляем стенды внутри выставочного комплекса
       ...exhibitionStands,
       
@@ -317,6 +349,23 @@ export default {
       return vdnhAreas.find(area => area.id === stand.parentAreaId);
     };
 
+    // Получение иерархии родительских зон от текущей зоны до самой верхней
+    const getParentHierarchy = (stand) => {
+      if (!stand || !stand.parentAreaId) return [];
+      
+      const parentIds = [];
+      let currentArea = stand;
+      
+      // Строим цепочку родительских ID, избегая циклических ссылок
+      while (currentArea && currentArea.parentAreaId && !parentIds.includes(currentArea.parentAreaId)) {
+        parentIds.push(currentArea.parentAreaId);
+        currentArea = vdnhAreas.find(area => area.id === currentArea.parentAreaId);
+      }
+      
+      // Возвращаем родительские зоны в порядке от ближайшего родителя к самому верхнему
+      return parentIds.map(id => vdnhAreas.find(area => area.id === id)).filter(Boolean);
+    };
+
     // Открыть информацию о выбранном стенде
     const openStandDetails = (stand) => {
       selectedStand.value = stand;
@@ -341,6 +390,7 @@ export default {
       mapMarkers,
       selectedStand,
       getParentArea,
+      getParentHierarchy,
       openStandDetails,
       closeStandDetails,
       goToCatalog
