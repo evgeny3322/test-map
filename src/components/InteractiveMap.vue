@@ -135,7 +135,12 @@ export default {
 
     // Добавление интерактивных областей на карту
     const addAreasToMap = () => {
-      props.standData.forEach((stand, index) => {
+      // Сортируем стенды по zIndex, чтобы сначала рисовать нижние слои
+      const sortedStands = [...props.standData].sort((a, b) => {
+        return (a.zIndex || 1) - (b.zIndex || 1);
+      });
+
+      sortedStands.forEach((stand, index) => {
         if (stand.shape) {
           // Обрабатываем стенды с геометрической формой
           const id = `area-${stand.id}`;
@@ -155,6 +160,8 @@ export default {
                   'standId': stand.id,
                   'description': stand.description,
                   'highlightColor': stand.highlightColor || stand.shape.style.fillColor,
+                  'isClickable': stand.isClickable !== false, // По умолчанию true, если не указано обратное
+                  'zIndex': stand.zIndex || 1
                 },
                 'geometry': geometry
               }
@@ -191,30 +198,34 @@ export default {
               id,
               outlineId: `${id}-outline`,
               sourceId,
-              standId: stand.id
+              standId: stand.id,
+              isClickable: stand.isClickable !== false,
+              zIndex: stand.zIndex || 1
             });
 
-            // Добавляем обработчики событий
-            map.value.on('click', id, (e) => {
-              const features = map.value.queryRenderedFeatures(e.point, { layers: [id] });
-              if (features.length > 0) {
-                const standId = features[0].properties.standId;
-                const stand = props.standData.find(s => s.id === standId);
-                if (stand) {
-                  highlightArea(stand.id);
-                  emit('openStandDetails', stand);
+            // Добавляем обработчики событий только для кликабельных областей
+            if (stand.isClickable !== false) {
+              map.value.on('click', id, (e) => {
+                const features = map.value.queryRenderedFeatures(e.point, { layers: [id] });
+                if (features.length > 0) {
+                  const standId = features[0].properties.standId;
+                  const stand = props.standData.find(s => s.id === standId);
+                  if (stand) {
+                    highlightArea(stand.id);
+                    emit('openStandDetails', stand);
+                  }
                 }
-              }
-            });
+              });
 
-            // Изменение курсора при наведении
-            map.value.on('mouseenter', id, () => {
-              map.value.getCanvas().style.cursor = 'pointer';
-            });
+              // Изменение курсора при наведении только для кликабельных областей
+              map.value.on('mouseenter', id, () => {
+                map.value.getCanvas().style.cursor = 'pointer';
+              });
 
-            map.value.on('mouseleave', id, () => {
-              map.value.getCanvas().style.cursor = '';
-            });
+              map.value.on('mouseleave', id, () => {
+                map.value.getCanvas().style.cursor = '';
+              });
+            }
           }
         } else if (stand.location) {
           // Обрабатываем стенды с точечными координатами

@@ -11,6 +11,7 @@
     <StandModal
         v-if="selectedStand"
         :stand="selectedStand"
+        :parentArea="getParentArea(selectedStand)"
         @close="closeStandDetails"
         @goToCatalog="goToCatalog"
     />
@@ -18,7 +19,7 @@
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import InteractiveMap from './components/InteractiveMap.vue';
 import StandModal from './components/StandModal.vue';
 
@@ -59,11 +60,131 @@ export default {
         <path d="M60 140 L60 100 L100 75 L140 100 L140 140" fill="none" stroke="#3F51B5" stroke-width="2" />
         <path d="M70 140 L70 110 M100 140 L100 110 M130 140 L130 110" stroke="#3F51B5" stroke-width="4" />
         <path d="M50 140 L150 140" stroke="#3F51B5" stroke-width="6" />
+      </svg>`,
+      
+      exhibition: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="90" fill="#8BC34A" />
+        <circle cx="100" cy="100" r="80" fill="#FFFFFF" />
+        <rect x="50" y="70" width="100" height="60" rx="5" fill="#8BC34A" opacity="0.2" />
+        <path d="M60 80 L60 120 M90 80 L90 120 M120 80 L120 120 M150 80 L150 120" stroke="#8BC34A" stroke-width="3" />
+        <path d="M50 70 L150 70 M50 130 L150 130" stroke="#8BC34A" stroke-width="5" />
       </svg>`
     };
 
+    // Большая родительская зона "Выставочный комплекс"
+    const exhibitionArea = {
+      id: 'exhibition-complex',
+      name: 'Выставочный комплекс ВДНХ',
+      logoSvg: logosSvg.exhibition,
+      description: 'Главный выставочный комплекс, объединяющий несколько павильонов и стендов с различными экспозициями. Ежегодно здесь проводятся международные выставки и форумы.',
+      shape: {
+        type: 'polygon',
+        coordinates: [
+          [37.6230, 55.8310],
+          [37.6260, 55.8330],
+          [37.6300, 55.8320],
+          [37.6320, 55.8300],
+          [37.6310, 55.8280],
+          [37.6250, 55.8270],
+          [37.6220, 55.8290]
+        ],
+        style: {
+          fillColor: '#8BC34A',
+          strokeColor: '#8BC34A',
+          fillOpacity: 0.3,
+          strokeWidth: 2
+        }
+      },
+      zIndex: 1, // Нижний слой
+      isClickable: false, // Не кликабельный, только для отображения общей зоны
+      discountCatalogUrl: '/catalog/exhibition',
+      highlightColor: '#8BC34A'
+    };
+
+    // Стенды, расположенные внутри выставочного комплекса
+    const exhibitionStands = [
+      {
+        id: 'tech-stand-1',
+        name: 'Павильон технологий',
+        logoSvg: logosSvg.museum,
+        parentAreaId: 'exhibition-complex', // Ссылка на родительскую зону
+        description: 'Современный павильон, демонстрирующий последние достижения в области технологий и инноваций.',
+        shape: {
+          type: 'rectangle',
+          coordinates: [
+            [37.6240, 55.8290],
+            [37.6260, 55.8310]
+          ],
+          style: {
+            fillColor: '#3F51B5',
+            strokeColor: '#3F51B5',
+            fillOpacity: 0.6,
+            strokeWidth: 2
+          }
+        },
+        zIndex: 2, // Слой выше родительской зоны
+        isClickable: true,
+        discountCatalogUrl: '/catalog/tech-stand',
+        highlightColor: '#3F51B5'
+      },
+      {
+        id: 'food-stand-1',
+        name: 'Гастрономический павильон',
+        logoSvg: logosSvg.food,
+        parentAreaId: 'exhibition-complex',
+        description: 'Павильон с кулинарными мастер-классами и дегустацией блюд национальной кухни.',
+        shape: {
+          type: 'circle',
+          coordinates: [37.6280, 55.8300],
+          radius: 30, // метры
+          style: {
+            fillColor: '#E91E63',
+            strokeColor: '#E91E63',
+            fillOpacity: 0.5,
+            strokeWidth: 2
+          }
+        },
+        zIndex: 2,
+        isClickable: true,
+        discountCatalogUrl: '/catalog/food-stand',
+        highlightColor: '#E91E63'
+      },
+      {
+        id: 'entertainment-stand-1',
+        name: 'Развлекательная зона',
+        logoSvg: logosSvg.entertainment,
+        parentAreaId: 'exhibition-complex',
+        description: 'Зона развлечений с интерактивными аттракционами и играми для всей семьи.',
+        shape: {
+          type: 'polygon',
+          coordinates: [
+            [37.6270, 55.8275],
+            [37.6290, 55.8280],
+            [37.6295, 55.8290],
+            [37.6280, 55.8295],
+            [37.6265, 55.8285]
+          ],
+          style: {
+            fillColor: '#FF9800',
+            strokeColor: '#FF9800',
+            fillOpacity: 0.5,
+            strokeWidth: 2
+          }
+        },
+        zIndex: 2,
+        isClickable: true,
+        discountCatalogUrl: '/catalog/entertainment-stand',
+        highlightColor: '#FF9800'
+      }
+    ];
+
     // Основные локации на ВДНХ
     const vdnhAreas = [
+      // Добавляем главную зону выставочного комплекса
+      exhibitionArea,
+      // Добавляем стенды внутри выставочного комплекса
+      ...exhibitionStands,
+      
       // 1. Парк аттракционов - полигон сложной формы
       {
         id: 'amusement-park',
@@ -87,13 +208,13 @@ export default {
             strokeWidth: 2
           }
         },
+        zIndex: 1,
+        isClickable: true,
         discountCatalogUrl: '/catalog/amusement',
         highlightColor: '#FF9800'
       },
 
       // 2. Музей космонавтики - прямоугольник
-      // Обновленный объект музея космонавтики с точными координатами из GeoJSON
-      // Обновленный объект музея космонавтики с уточненными координатами из GeoJSON
       {
         id: 'space-museum',
         name: 'Музей космонавтики',
@@ -115,6 +236,8 @@ export default {
             strokeWidth: 3
           }
         },
+        zIndex: 1,
+        isClickable: true,
         discountCatalogUrl: '/catalog/space-museum',
         highlightColor: '#3F51B5'
       },
@@ -136,6 +259,8 @@ export default {
             strokeWidth: 2
           }
         },
+        zIndex: 1,
+        isClickable: true,
         discountCatalogUrl: '/catalog/dining',
         highlightColor: '#E91E63'
       }
@@ -186,6 +311,12 @@ export default {
     const stands = ref(vdnhAreas);
     const mapMarkers = ref(mapIcons);
 
+    // Получение родительской зоны для стенда
+    const getParentArea = (stand) => {
+      if (!stand || !stand.parentAreaId) return null;
+      return vdnhAreas.find(area => area.id === stand.parentAreaId);
+    };
+
     // Открыть информацию о выбранном стенде
     const openStandDetails = (stand) => {
       selectedStand.value = stand;
@@ -209,6 +340,7 @@ export default {
       stands,
       mapMarkers,
       selectedStand,
+      getParentArea,
       openStandDetails,
       closeStandDetails,
       goToCatalog

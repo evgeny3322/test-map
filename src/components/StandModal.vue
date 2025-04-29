@@ -18,6 +18,11 @@
             <div v-if="getLocationInfo()" class="location-info">
               <strong>Местоположение:</strong> {{ getLocationInfo() }}
             </div>
+
+            <!-- Добавлены сведения о родительской зоне -->
+            <div v-if="parentArea" class="parent-area-info">
+              <strong>Расположен в зоне:</strong> {{ parentArea.name }}
+            </div>
           </div>
         </div>
 
@@ -59,6 +64,10 @@ export default {
     stand: {
       type: Object,
       required: true
+    },
+    parentArea: {
+      type: Object,
+      default: null
     }
   },
   emits: ['close', 'goToCatalog'],
